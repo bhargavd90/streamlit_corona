@@ -1,17 +1,11 @@
 import pandas as pd
-import requests
-from pandas import json_normalize
-import numpy as np
 import streamlit as st
-import plotly.express as px
-import plotly.graph_objects as go
 from line import Line
 from map import Map
 
 
-st.set_page_config(page_title="streamlit_project", page_icon=":mask:", layout="centered")
-st.sidebar.title(":mask: Corona Dashboard")
-st.sidebar.markdown("##")
+def do_stuff_on_page_load():
+    st.set_page_config(layout="wide")
 
 
 @st.cache
@@ -26,10 +20,13 @@ def get_data():
     return dataframe
 
 
+do_stuff_on_page_load()
+st.sidebar.title(":mask: Dashboard :mask:")
+st.sidebar.markdown("##")
 df = get_data()
 
 plot_type = st.sidebar.radio(
-    "Please select a plot type",
+    "Please select a plot type :",
     ('Line Plot', 'Geo Plot')
 )
 

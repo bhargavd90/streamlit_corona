@@ -5,11 +5,11 @@ import datetime
 
 
 def plot_line(df_sub, time_line):
-    if time_line == "Cases To Deaths":
+    if time_line == "Deaths/Cases":
         df_group_1 = df_sub.groupby(['dateRep'])["cases"].agg('sum').reset_index(name='total_cases')
         df_group_2 = df_sub.groupby(['dateRep'])["deaths"].agg('sum').reset_index(name='total_deaths')
         df_group = pd.merge(df_group_1, df_group_2, on='dateRep')
-        df_group["total_cases_deaths"] = df_group["total_cases"] / df_group["total_deaths"]
+        df_group["total_cases_deaths"] = df_group["total_deaths"] / df_group["total_cases"]
     elif time_line == "Cases":
         df_group = df_sub.groupby(['dateRep'])["cases"].agg('sum').reset_index(name='total_cases_deaths')
     elif time_line == "Deaths":
@@ -26,14 +26,15 @@ class Line:
         self.dataframe = dataframe
 
     def line_app(self):
+        st.title(":mask: Timeline per country")
         date_range = st.date_input(
-            label="Date Range",
+            label="Date Range :",
             value=[self.dataframe["dateRep"].min(), self.dataframe["dateRep"].max()],
             min_value=self.dataframe["dateRep"].min(),
             max_value=self.dataframe["dateRep"].max(),
         ),
 
-        countriesAndTerritories = st.selectbox("Select Country: ",
+        countriesAndTerritories = st.selectbox("Country :",
                                                options=self.dataframe["countriesAndTerritories"].unique(),
                                                index=0)
 
@@ -44,19 +45,20 @@ class Line:
             total_deaths = int(df_sub["deaths"].sum())
             first_column, second_column, third_column = st.columns(3)
             with first_column:
-                st.subheader("Total Cases:")
+                st.subheader("Cases:")
                 st.subheader(total_cases)
             with second_column:
-                st.subheader("Total Deaths:")
+                st.subheader("Deaths:")
                 st.subheader(total_deaths)
             with third_column:
-                st.subheader("Cases To Deaths:")
-                st.subheader(round(total_cases / total_deaths, 2))
+                st.subheader("Deaths/Cases:")
+                st.subheader(round(total_deaths / total_cases, 2))
             st.markdown("___")
-            time_line = st.selectbox("Select Timeline Plot: ", options=["Cases", "Deaths", "Cases To Deaths"], index=0)
+            time_line = st.selectbox("Timeline Plot: ", options=["Cases", "Deaths", "Deaths/Cases"], index=0)
             plot_line(df_sub, time_line)
         except Exception as e:
-            st.markdown("Please select a valid date range")
+            print(e)
+            st.error("Insufficient data to display the plot")
 
 
 
