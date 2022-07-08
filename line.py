@@ -1,10 +1,10 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-import datetime
+import plotly.graph_objects as go
 
 
-def plot_line(df_sub, time_line):
+def plot_line(df_sub: pd.DataFrame, time_line: str, cumulative_checkbox: bool) -> None:
     if time_line == "Deaths/Cases":
         df_group_1 = df_sub.groupby(['dateRep'])["cases"].agg('sum').reset_index(name='total_cases')
         df_group_2 = df_sub.groupby(['dateRep'])["deaths"].agg('sum').reset_index(name='total_deaths')
@@ -14,13 +14,71 @@ def plot_line(df_sub, time_line):
         df_group = df_sub.groupby(['dateRep'])["cases"].agg('sum').reset_index(name='total_cases_deaths')
     elif time_line == "Deaths":
         df_group = df_sub.groupby(['dateRep'])["deaths"].agg('sum').reset_index(name='total_cases_deaths')
-    plot = px.area(df_group, x="dateRep", y="total_cases_deaths")
+    if cumulative_checkbox:
+        df_group["total_cases_deaths"] = df_group.total_cases_deaths.cumsum()
+    plot = px.area(df_group, x="dateRep", y="total_cases_deaths", labels={
+        "dateRep": "date slider",
+        "total_cases_deaths": time_line
+    }, )
     plot.update_xaxes(showgrid=False)
     plot.update_yaxes(showgrid=False)
+    plot.update_layout(
+        xaxis=dict(
+            rangeselector=dict(
+                buttons=list([
+                    dict(count=1,
+                         label="1m",
+                         step="month",
+                         stepmode="backward"),
+                    dict(count=6,
+                         label="6m",
+                         step="month",
+                         stepmode="backward"),
+                    dict(count=1,
+                         label="1y",
+                         step="year",
+                         stepmode="backward"),
+                    dict(step="all")
+                ])
+            ),
+            rangeslider=dict(
+                visible=True
+            ),
+            type="date"
+        )
+    )
+    plot.update_layout(margin=dict(t=0, l=0, r=0, b=0))
+    st.plotly_chart(plot)
+
+
+def plot_pie(df_sub: pd.DataFrame) -> None:
+    st.subheader("piechart w/r to population")
+    st.markdown("##")
+    df_group_1 = df_sub.groupby(['popData2020', "countriesAndTerritories"])['cases'].agg('sum').reset_index(
+        name='total_cases')
+    df_group_2 = df_sub.groupby(['popData2020'])['deaths'].agg('sum').reset_index(name='total_deaths')
+    df_group = pd.merge(df_group_1, df_group_2, on='popData2020')
+    df_group["no_total_cases"] = df_group["popData2020"] - df_group["total_cases"]
+    df_group["no_total_deaths"] = df_group["total_cases"] - df_group["total_deaths"]
+    df_group["total_cases_pie"] = round(df_group["total_cases"] * 100 / df_group["popData2020"], 2)
+    df_group["no_total_cases_pie"] = 100 - df_group["total_cases_pie"]
+    df_group["total_deaths_pie"] = round(
+        df_group["total_deaths"] * df_group["total_cases_pie"] / df_group["total_cases"], 2)
+    df_group["no_total_deaths_pie"] = df_group["total_cases_pie"] - df_group["total_deaths_pie"]
+    plot = go.Figure(go.Sunburst(
+        labels=["population", "positive", "negative", "deaths", "no_deaths"],
+        parents=["", "population", "population", "positive", "positive"],
+        values=[100, df_group["total_cases_pie"].iloc[0], df_group["no_total_cases_pie"].iloc[0],
+                df_group["total_deaths_pie"].iloc[0], df_group["no_total_deaths_pie"].iloc[0]],
+        branchvalues="total",
+    ))
+    plot.update_layout(margin=dict(t=0, l=0, r=0, b=0))
     st.plotly_chart(plot)
 
 
 class Line:
+
+    # First page
 
     def __init__(self, dataframe):
         self.dataframe = dataframe
@@ -43,22 +101,29 @@ class Line:
                                           "countriesAndTerritories==@countriesAndTerritories")
             total_cases = int(df_sub["cases"].sum())
             total_deaths = int(df_sub["deaths"].sum())
-            first_column, second_column, third_column = st.columns(3)
-            with first_column:
+            column_0_0, column_0_1, column_0_2 = st.columns(3)
+            with column_0_0:
                 st.subheader("Cases:")
                 st.subheader(total_cases)
-            with second_column:
+            with column_0_1:
                 st.subheader("Deaths:")
                 st.subheader(total_deaths)
-            with third_column:
+            with column_0_2:
                 st.subheader("Deaths/Cases:")
                 st.subheader(round(total_deaths / total_cases, 2))
             st.markdown("___")
-            time_line = st.selectbox("Timeline Plot: ", options=["Cases", "Deaths", "Deaths/Cases"], index=0)
-            plot_line(df_sub, time_line)
+            column_1_0, column_1_1, column_1_2 = st.columns(3)
+            with column_1_0:
+                time_line = st.selectbox("Timeline Plot: ", options=["Cases", "Deaths", "Deaths/Cases"], index=0)
+            with column_1_1:
+                cumulative_checkbox = st.checkbox('cumulative')
+            with column_1_2:
+                piechart_checkbox = st.checkbox('plot pie')
+            plot_line(df_sub, time_line, cumulative_checkbox)
+            st.markdown("___")
+            if piechart_checkbox:
+                plot_pie(df_sub)
+
         except Exception as e:
             print(e)
-            st.error("Insufficient data to display the plot")
-
-
-
+            st.error("insufficient data to display the plot")
