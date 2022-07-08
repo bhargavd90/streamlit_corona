@@ -41,13 +41,21 @@ class Map:
                          z=df_group[z_name].astype(float),
                          colorscale="Reds")]
             layout = dict(geo=dict(scope='europe'),
-                          height=800,
-                          width=800,
-                          dragmode=False
+                          height=600,
+                          width=600,
+                          dragmode=False,
+                          autosize=False,
+                          margin=dict(
+                                      l=0,
+                                      r=0,
+                                      b=0,
+                                      t=0,
+                                      autoexpand=True
+                                  ),
                           # sliders=slider
                           )
             plot = dict(data=data, layout=layout)
-            st.plotly_chart(plot)
+            st.plotly_chart(plot, use_container_width=True)
         except Exception as e:
             print(e)
             st.error("insufficient data to display the plot or error while plotting")

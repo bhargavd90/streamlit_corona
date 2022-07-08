@@ -48,12 +48,10 @@ def plot_line(df_sub: pd.DataFrame, time_line: str, cumulative_checkbox: bool) -
         )
     )
     plot.update_layout(margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(plot)
+    st.plotly_chart(plot, use_container_width=True)
 
 
-def plot_pie(df_sub: pd.DataFrame) -> None:
-    st.subheader("piechart w/r to population")
-    st.markdown("##")
+def plot_pie(df_sub: pd.DataFrame, time_line: str) -> None:
     df_group_1 = df_sub.groupby(['popData2020', "countriesAndTerritories"])['cases'].agg('sum').reset_index(
         name='total_cases')
     df_group_2 = df_sub.groupby(['popData2020'])['deaths'].agg('sum').reset_index(name='total_deaths')
@@ -65,15 +63,35 @@ def plot_pie(df_sub: pd.DataFrame) -> None:
     df_group["total_deaths_pie"] = round(
         df_group["total_deaths"] * df_group["total_cases_pie"] / df_group["total_cases"], 2)
     df_group["no_total_deaths_pie"] = df_group["total_cases_pie"] - df_group["total_deaths_pie"]
-    plot = go.Figure(go.Sunburst(
+    plot_1 = go.Figure(go.Sunburst(
         labels=["population", "positive", "negative", "deaths", "no_deaths"],
         parents=["", "population", "population", "positive", "positive"],
         values=[100, df_group["total_cases_pie"].iloc[0], df_group["no_total_cases_pie"].iloc[0],
                 df_group["total_deaths_pie"].iloc[0], df_group["no_total_deaths_pie"].iloc[0]],
         branchvalues="total",
     ))
-    plot.update_layout(margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(plot)
+    #plot_1.update_layout(margin=dict(t=0, l=0, r=0, b=0))
+
+    df_sub["Day_of_Week"] = df_sub.dateRep.dt.day_name()
+    if time_line != "Deaths/Cases":
+        if time_line == "Cases":
+            df_day = df_sub.groupby(['Day_of_Week'])["cases"].agg('sum').reset_index(name='per_day')
+        elif time_line == "Deaths":
+            df_day = df_sub.groupby(['Day_of_Week'])["deaths"].agg('sum').reset_index(name='per_day')
+        plot_2 = px.pie(df_day, values='per_day', names='Day_of_Week')
+
+    column_3_0, column_3_1 = st.columns(2)
+    with column_3_0:
+        st.subheader("piechart w/r to population")
+        st.markdown("##")
+        st.plotly_chart(plot_1, use_container_width=True)
+    with column_3_1:
+        if time_line != "Deaths/Cases":
+            st.subheader("piechart w/r to day of week")
+            st.markdown("##")
+            st.plotly_chart(plot_2, use_container_width=True)
+        else:
+            pass
 
 
 class Line:
@@ -122,8 +140,11 @@ class Line:
             plot_line(df_sub, time_line, cumulative_checkbox)
             st.markdown("___")
             if piechart_checkbox:
-                plot_pie(df_sub)
-
+                plot_pie(df_sub, time_line)
+                st.markdown("___")
+            st.subheader("Tabular data")
+            st.markdown("##")
+            st.dataframe(df_sub)
         except Exception as e:
             print(e)
             st.error("insufficient data to display the plot")

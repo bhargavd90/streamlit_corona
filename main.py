@@ -17,7 +17,7 @@ def get_data(path: str) -> pd.DataFrame:
     # dictr = response.json()
     # records = dictr['records']
     # dataframe = json_normalize(records)
-    dataframe = pd.read_csv(path)
+    dataframe = pd.read_csv(path, index_col=0)
     dataframe['dateRep'] = pd.to_datetime(dataframe['dateRep'], format="%d/%m/%Y")
     dataframe["popData2020"] = dataframe["popData2020"].astype(float)
     return dataframe
